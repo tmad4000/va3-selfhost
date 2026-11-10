@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VA3 Self-Host</title>
+<meta name="description" content="Run your own private Voice Assistant 3 server for the VA3 Drive iPhone app: your VM, your OpenAI key, your data.">
+<meta name="color-scheme" content="light dark">
+<style>
+:root {
+  --bg: #f7f6f2; --surface: #ffffff; --text: #1d1d1b; --muted: #5d5c57;
+  --line: #e3e1d9; --accent: #0f6b5c; --accent-ink: #ffffff; --code-bg: #f0eee7;
+  --warn: #8a5a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121412; --surface: #1a1d1a; --text: #ecebe6; --muted: #a3a29b;
+    --line: #2c302c; --accent: #4cc2a8; --accent-ink: #08201b; --code-bg: #222622; --warn: #e2b04a;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121412; --surface: #1a1d1a; --text: #ecebe6; --muted: #a3a29b;
+  --line: #2c302c; --accent: #4cc2a8; --accent-ink: #08201b; --code-bg: #222622; --warn: #e2b04a;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.6 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+header.top { display: flex; align-items: center; justify-content: space-between; padding: 20px 0 0; gap: 12px; }
+.brand { font-weight: 700; letter-spacing: .02em; }
+.brand small { color: var(--muted); font-weight: 500; margin-left: 6px; }
+.theme { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
+.hero { padding: 48px 0 24px; }
+h1 { font-size: clamp(30px, 6vw, 44px); line-height: 1.12; margin: 0 0 16px; letter-spacing: -.01em; }
+.lede { font-size: 19px; color: var(--muted); margin: 0 0 24px; }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-block; text-decoration: none; padding: 11px 18px; border-radius: 10px; font-weight: 600; border: 1px solid var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { color: var(--accent); }
+section { padding: 28px 0; border-top: 1px solid var(--line); }
+h2 { font-size: 23px; margin: 0 0 12px; }
+ul.ticks { padding-left: 0; list-style: none; margin: 0; }
+ul.ticks li { padding-left: 26px; position: relative; margin: 6px 0; }
+ul.ticks li::before { content: ""; position: absolute; left: 4px; top: .62em; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.card h3 { margin: 0 0 6px; font-size: 16px; }
+.card p { margin: 0; color: var(--muted); font-size: 15px; }
+ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; }
+ol.steps li { counter-increment: s; position: relative; padding: 0 0 18px 48px; }
+ol.steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; font-weight: 700; color: var(--accent); }
+ol.steps strong { display: block; }
+ol.steps span { color: var(--muted); font-size: 15px; }
+code { background: var(--code-bg); border-radius: 5px; padding: 1px 5px; font: 14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+.note { color: var(--muted); font-size: 15px; }
+.pending { color: var(--warn); }
+footer { padding: 28px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">VA3 <small>self-host kit · v0.28.1</small></div>
+    <button class="theme" id="theme" type="button" aria-label="Switch color theme">Theme: system</button>
+  </header>
+
+  <div class="hero">
+    <h1>Your own hands-free voice assistant, on your own server.</h1>
+    <p class="lede">Voice Assistant 3 (VA3) is a voice-first assistant built for talking while you drive or walk. The <strong>VA3 Drive</strong> iPhone app records while the screen is locked, holds what you say through signal drops, and plays replies aloud. This kit runs the server half on a small cloud VM you control.</p>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/tmad4000/va3-selfhost/blob/main/cloud-setup.md">Setup guide</a>
+      <a class="btn ghost" href="https://github.com/tmad4000/va3-selfhost/releases/download/v0.28.1/VA3Server-0.28.1.zip">Download server kit (v0.28.1)</a>
+      <a class="btn ghost" href="#ios">Get the iPhone app</a>
+    </div>
+  </div>
+
+  <section>
+    <h2>What you get</h2>
+    <ul class="ticks">
+      <li>A private voice conversation server: speech in, a short spoken answer out, with persistent memory of what you ask it to remember.</li>
+      <li>Store-and-forward: speak with no signal and the phone sends it when you're back online.</li>
+      <li>One small dependency-free Node.js process, a systemd unit, and HTTPS through Tailscale (private) or your own domain.</li>
+      <li>Revocable per-device tokens, so a lost phone is one command away from locked out.</li>
+    </ul>
+    <p class="note">Not included: agent automation, browsing or computer control. Those features rely on infrastructure that isn't part of this kit and are disabled in self-host mode.</p>
+  </section>
+
+  <section>
+    <h2>Privacy model</h2>
+    <div class="grid">
+      <div class="card"><h3>Your server</h3><p>Runs on a VM in your own cloud account. Conversations and memory stay in its data directory.</p></div>
+      <div class="card"><h3>Your key</h3><p>Uses your own OpenAI API key, stored in a root-only file on your server. You see and pay for all usage.</p></div>
+      <div class="card"><h3>Your data</h3><p>No telemetry, no callbacks. Nothing goes to whoever shared this kit, and it ships with none of their keys or data.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Requirements</h2>
+    <ul class="ticks">
+      <li>A Linux VM (Ubuntu 24.04 LTS; 1 vCPU / 1 GB is plenty) on any provider, about €4–15/month.</li>
+      <li>An OpenAI API account with billing on. Typical casual use costs a few dollars a month; set a budget limit.</li>
+      <li>An iPhone running VA3 Drive (TestFlight).</li>
+      <li>A free Tailscale account (recommended), or a domain you can point at the VM.</li>
+      <li>Comfort running commands over SSH. Setup is copy-paste and takes about one sitting.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Setup in five steps</h2>
+    <ol class="steps">
+      <li><strong>Create a VM and install Node.js 22</strong><span>Ubuntu 24.04 on Hetzner, GCP or any provider.</span></li>
+      <li><strong>Download and verify the kit</strong><span>Check <code>SHA256SUMS</code>, extract to <code>/opt/va3</code>, and create a dedicated <code>va3</code> user.</span></li>
+      <li><strong>Initialize and issue a phone token</strong><span><code>node bin/va3-setup.mjs init</code>, then <code>issue</code>. The token is shown once.</span></li>
+      <li><strong>Run it as a service</strong><span>systemd unit with your OpenAI key in a 0600 <code>EnvironmentFile</code>, listening on loopback only.</span></li>
+      <li><strong>Add HTTPS and connect the phone</strong><span><code>tailscale serve</code> (or Caddy), check <code>/api/drive/hello</code>, then tap Verify and connect in the app.</span></li>
+    </ol>
+    <p><a href="https://github.com/tmad4000/va3-selfhost/blob/main/cloud-setup.md">Read the full step-by-step guide →</a> It also covers updates, revocation, backups and uninstalling.</p>
+  </section>
+
+  <section id="ios">
+    <h2>The iPhone app</h2>
+    <p>VA3 Drive is distributed through Apple's TestFlight beta program. Install Apple's free <strong>TestFlight</strong> app, then open your invite:</p>
+    <p data-testflight=""><a class="btn primary" id="tf" href="">Join the VA3 Drive beta</a></p>
+    <p class="note pending" id="tf-pending" hidden>The TestFlight invite link isn't published here yet. Ask the person who shared this page for an invite.</p>
+    <p class="note">In the app, choose <strong>Set up VA3 → Connect your server</strong>, then enter your server's HTTPS address and the device token. Without a server you can still try <strong>Open local sample</strong>, a clearly labeled offline demo.</p>
+  </section>
+
+  <footer>
+    VA3 self-host kit v0.28.1 · Personal use permitted; all other rights reserved. Provided as is, without warranty. Your server, your key, your responsibility.
+  </footer>
+</div>
+<script>
+(function () {
+  var root = document.documentElement, btn = document.getElementById('theme');
+  var order = ['system', 'light', 'dark'], mode = 'system';
+  try { mode = localStorage.getItem('va3-theme') || 'system'; } catch (e) {}
+  function apply() {
+    if (mode === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', mode);
+    btn.textContent = 'Theme: ' + mode;
+  }
+  btn.addEventListener('click', function () {
+    mode = order[(order.indexOf(mode) + 1) % order.length];
+    try { localStorage.setItem('va3-theme', mode); } catch (e) {}
+    apply();
+  });
+  apply();
+  var tf = document.querySelector('[data-testflight]');
+  var url = tf.getAttribute('data-testflight');
+  if (!/^https:\/\/testflight\.apple\.com\//.test(url)) { tf.hidden = true; document.getElementById('tf-pending').hidden = false; }
+})();
+</script>
+</body>
+</html>

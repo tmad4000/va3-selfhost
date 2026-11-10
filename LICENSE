@@ -1,0 +1,20 @@
+VA3 self-host kit
+Copyright (c) 2026 the VA3 author. All rights reserved.
+
+Personal use permitted: you may download, install, run and modify this kit
+for your own personal, non-commercial use on servers and devices you control.
+No other rights are granted. In particular, redistribution, sublicensing,
+resale, or offering the software as a hosted service to others requires the
+copyright holder's prior written permission.
+
+The bundled third-party "ws" library (server-kit/vendor/ws) is distributed
+under its own MIT license, included at server-kit/vendor/ws/LICENSE.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. You are responsible for your own server, API keys and provider
+charges.

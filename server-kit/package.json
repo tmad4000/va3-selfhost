@@ -1,0 +1,12 @@
+{
+  "name": "va3-owner-server",
+  "version": "0.28.1",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/self-host.js"
+  }
+}
