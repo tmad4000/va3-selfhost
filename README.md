@@ -4,7 +4,7 @@ Run your own private **Voice Assistant 3 (VA3)** server for the **VA3 Drive** iP
 
 - **Landing page:** `index.html` (published with GitHub Pages)
 - **Step-by-step cloud guide:** [cloud-setup.md](cloud-setup.md)
-- **Server kit download (v0.28.1):** https://github.com/tmad4000/va3-selfhost/releases/download/v0.28.1/VA3Server-0.28.1.zip, verify with `SHA256SUMS`
+- **Server kit download (v0.28.1-r2):** https://github.com/tmad4000/va3-selfhost/releases/download/v0.28.1-r2/VA3Server-0.28.1-r2.zip, verify with `SHA256SUMS`
 - **Server kit source, browsable:** [`server-kit/`](server-kit/) (identical to the zip contents; see `server-kit/SHA256SUMS`)
 - **Reference docs inside the kit:** `server-kit/docs/self-host-setup.md`
 

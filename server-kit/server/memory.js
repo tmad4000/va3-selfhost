@@ -6,7 +6,7 @@
 //    naive substring search. Swap for a real DB/embedding store later.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, renameSync } from "node:fs";
 import { join } from "node:path";
-import { DATA_DIR } from "./env.js";
+import { DATA_DIR, SELF_HOST } from "./env.js";
 import { matchProjectFamily } from "./projects.js";
 import { currentVoiceSession } from "./transcripts.js";
 import { parseScratchpad, serializeScratchpad, scratchpadTimestamp, scratchpadContext } from "./scratchpad.js";
@@ -93,7 +93,8 @@ export function resolveScratchpad(match) {
 // non-enumerable `visionSync` promise so a caller can wait for the result.
 export function saveMemory({ key, content, tags = [], project, syncToVision = true, visionTags = [], source = "memory_save" } = {}) {
   ensure();
-  const detected = matchProjectFamily(`${key || ""} ${content || ""}`);
+  // Project families are the original installation's; standalone servers keep plain memories.
+  const detected = SELF_HOST ? null : matchProjectFamily(`${key || ""} ${content || ""}`);
   const resolvedProject = project || detected?.key || undefined;
   const resolvedTags = resolvedProject && !tags.includes(resolvedProject) ? [...tags, resolvedProject] : tags;
   const item = {

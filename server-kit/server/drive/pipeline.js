@@ -17,7 +17,7 @@ import { speak, splitForSpeech, think, transcribe } from "./ai.js";
 import { askCoordinator, coordinatorStatus, setCoordinatorSayHandler } from "./coordinator.js";
 import { convDir, emit, mutateState, readState } from "./store.js";
 import { encodePart, realtimeEnabled, toPcm, realtimeTurn } from "./realtime-brain.js";
-import { env, SELF_HOST } from "../env.js";
+import { env, ownerDefault, SELF_HOST } from "../env.js";
 import { OFF_GRACE_MS, snippetPolicy, sweepConversation } from "./snippets.js";
 
 const GAP_WAIT_MS = Number(process.env.DRIVE_GAP_WAIT_MS || 15_000);
@@ -38,16 +38,38 @@ export function configurePipeline({ port, title }) {
 
 const FRONT_TOOLS = new Set(["get_system_overview", "escalate_to_smart_model", "memory_save", "memory_search", "submit_feedback"]);
 
+// The owner's name in model-facing text. Self-host: VA3_OWNER_NAME or neutral
+// wording; the original installation's name comes from config/owner-defaults.json.
+const ownerName = () => env("VA3_OWNER_NAME", SELF_HOST ? "" : "the owner");
+
+// Standalone servers get generic local-memory tools only: no project families,
+// no Vision sync, no coordinator.
+const SELF_HOST_TOOLS = Object.freeze([
+  {
+    type: "function",
+    name: "memory_save",
+    description: "Save a durable fact, preference or decision the owner wants remembered across conversations.",
+    parameters: { type: "object", properties: { key: { type: "string", description: "Short label" }, content: { type: "string" } }, required: ["key", "content"], additionalProperties: false },
+  },
+  {
+    type: "function",
+    name: "memory_search",
+    description: "Search persistent memory for past facts.",
+    parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"], additionalProperties: false },
+  },
+]);
+
 function driveTools() {
-  if (SELF_HOST) return toolDefinitions().filter(t => ["memory_save", "memory_search"].includes(t.name));
+  if (SELF_HOST) return SELF_HOST_TOOLS;
+  const owner = ownerName();
   return [
     {
       type: "function",
       name: "ask_coordinator",
-      description: "Forward a request to Jacob's persistent coordinator agent, which orchestrates coding/research/ops sub-agents through Paseo and keeps the session checklist. Use for anything multi-step, anything touching his machines, repos, deploys, email, or follow-ups, and for steering or questioning work already in progress. Returns immediately; the coordinator reports back by voice later.",
+      description: `Forward a request to ${owner}'s persistent coordinator agent, which orchestrates coding/research/ops sub-agents through Paseo and keeps the session checklist. Use for anything multi-step, anything touching his machines, repos, deploys, email, or follow-ups, and for steering or questioning work already in progress. Returns immediately; the coordinator reports back by voice later.`,
       parameters: {
         type: "object",
-        properties: { message: { type: "string", description: "Self-contained request in Jacob's words plus any context from this conversation the coordinator needs." } },
+        properties: { message: { type: "string", description: `Self-contained request in ${owner}'s words plus any context from this conversation the coordinator needs.` } },
         required: ["message"],
       },
     },
@@ -63,15 +85,18 @@ function driveTools() {
 
 function instructions() {
   const now = new Date().toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", month: "short", day: "numeric" });
-  if (SELF_HOST) return [`You are the server owner's voice assistant in VA3 Drive. Current time: ${now}. Reply in one to three short spoken sentences; avoid markdown, URLs, IDs and paths. Answer the owner's questions directly. Typed messages work like speech. Combine messages received together after being offline, and never pretend to have heard unclear audio. This standalone server supports voice conversation and local memory. Coordinator automation, browsing, external research and machine control are not configured here; state that clearly when requested and never claim to have executed an action.`, memoryContextBlock()].filter(Boolean).join("\n\n");
+  if (SELF_HOST) {
+    const name = ownerName();
+    return [`You are ${name ? `${name}'s` : "the server owner's"} voice assistant in VA3 Drive. Current time: ${now}. Reply in one to three short spoken sentences; avoid markdown, URLs, IDs and paths. Answer ${name ? `${name}'s` : "the owner's"} questions directly. Typed messages work like speech. Combine messages received together after being offline, and never pretend to have heard unclear audio. This standalone server supports voice conversation and local memory. Coordinator automation, browsing, external research and machine control are not configured here; state that clearly when requested and never claim to have executed an action.`, memoryContextBlock()].filter(Boolean).join("\n\n");
+  }
   return [
-    `You are Jacob's voice assistant in DRIVE MODE (Voice Assistant v3). He is usually driving with flaky cell signal; your replies are synthesized to speech and played through the car. Current time: ${now}.
+    `You are ${ownerName()}'s voice assistant in DRIVE MODE (Voice Assistant v3). He is usually driving with flaky cell signal; your replies are synthesized to speech and played through the car. Current time: ${now}.
 
 Style: one to three short spoken sentences. No markdown, lists, URLs, IDs or file paths. Lead with the answer. If he is just thinking out loud, a brief acknowledgment is enough.
 
 You are the voice FRONT of an orchestration stack. You do not do multi-step work yourself: call ask_coordinator for anything involving agents, code, his machines, repos, deploys, email, research projects or follow-ups, and for steering or checking work already underway. Then confirm in a few words ("On it, I've passed that to the coordinator."). Messages labelled as coordinator updates in the history were already spoken to him; don't repeat them unless asked. Reminders, to-dos and follow-ups also go to ask_coordinator (it tracks them on the checklist); memory_save is only for durable preferences and facts. Use escalate_to_smart_model for hard reasoning or current events.
 
-Never refuse on capability grounds and never say the coordinator or its agents "can't" do something on a machine: they can drive apps, screens and browsers on the M4 or on his laptop, the M5. If he insists, says "send it verbatim", or says it is a test, pass his exact words to ask_coordinator and report what actually happened.
+Never refuse on capability grounds and never say the coordinator or its agents "can't" do something on a machine: they can drive apps, screens and browsers ${ownerDefault("drive_machines", "on its hosts")}. If he insists, says "send it verbatim", or says it is a test, pass his exact words to ask_coordinator and report what actually happened.
 
 Store-and-forward: some of his messages may carry a note that they were spoken while offline. When several arrive together, answer them together, briefly, and skip anything that is now moot. Never pretend to have heard something marked as unclear.
 
@@ -94,7 +119,7 @@ function historyInput(conv) {
       const tags = [];
       if (r.metadata?.source === "typed") tags.push("typed");
       if (r.metadata?.offline_note) tags.push(r.metadata.offline_note);
-      if (r.metadata?.retry_of) tags.push(RETRY_NOTE);
+      if (r.metadata?.retry_of) tags.push(retryNote());
       if (r.metadata?.to === "coordinator") tags.push("sent directly to the coordinator");
       if (tags.length) content = `(${tags.join("; ")}) ${content}`;
     } else if (r.metadata?.source === "coordinator") {
@@ -115,10 +140,10 @@ function offlineNote(input) {
   return `spoken at ${at} while offline, ${mins} min ago`;
 }
 
-// Jacob re-sent a saved recording of an utterance (Retry on the phone).
-const RETRY_NOTE = SELF_HOST ? "re-sent by the owner from a saved recording because an earlier attempt was not heard" : "re-sent by Jacob from his saved recording because an earlier attempt was not heard";
+// The owner re-sent a saved recording of an utterance (Retry on the phone).
+const retryNote = () => SELF_HOST ? `re-sent by ${ownerName() || "the owner"} from a saved recording because an earlier attempt was not heard` : `re-sent by ${ownerName()} from his saved recording because an earlier attempt was not heard`;
 function inputNote(input) {
-  return [offlineNote(input), input.retry_of ? RETRY_NOTE : ""].filter(Boolean).join("; ");
+  return [offlineNote(input), input.retry_of ? retryNote() : ""].filter(Boolean).join("; ");
 }
 
 // newInput=true means fresh speech/text arrived: an unspoken in-flight reply is
@@ -350,6 +375,11 @@ async function respond(conv) {
 }
 
 async function runTool(conv, name, args) {
+  if (SELF_HOST) {
+    if (name === "memory_save") return dispatchTool(name, { key: args.key, content: args.content, sync_to_vision: false, session_id: conv });
+    if (name === "memory_search") return dispatchTool(name, { query: args.query, session_id: conv });
+    throw new Error(`Tool not available on this server: ${name}`);
+  }
   if (name === "ask_coordinator") return askCoordinator(conv, { message: args.message, title: titleFor(conv), port: serverPort, source: "voice front" });
   if (name === "coordinator_status") return coordinatorStatus(conv);
   if (!FRONT_TOOLS.has(name)) throw new Error(`Tool not available in drive mode: ${name}`);
@@ -386,9 +416,15 @@ export async function clearContext(conv) {
   return { ok: true, epoch };
 }
 
+// Everything model-facing that this module composes, for the self-host prompt
+// audit (bin/kit-leak-check.mjs selfHostPromptAudit, test/self-host-prompt.test.mjs).
+export function modelContextForAudit() {
+  return { instructions: instructions(), tools: driveTools(), retry_note: retryNote(), interrupt_subject: ownerName() || "The owner" };
+}
+
 export function noteInterrupt(conv, { reply_id, played_ms }) {
   generation.set(conv, (generation.get(conv) || 0) + 1);
-  appendTranscript(conv, { role: "system", text: `${SELF_HOST ? "The owner" : "Jacob"} cut off the previous reply after about ${Math.round((Number(played_ms) || 0) / 1000)} seconds.`, metadata: { reply_id, interrupted: true } });
+  appendTranscript(conv, { role: "system", text: `${ownerName() || "The owner"} cut off the previous reply after about ${Math.round((Number(played_ms) || 0) / 1000)} seconds.`, metadata: { reply_id, interrupted: true } });
   emit(conv, { type: "reply_cancelled", reply_id });
   return { ok: true };
 }

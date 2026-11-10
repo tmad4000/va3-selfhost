@@ -4,7 +4,7 @@ This guide sets up a private **Voice Assistant 3 (VA3)** server on a small Linux
 
 The steps are provider-neutral and tested against **Ubuntu 24.04 LTS**. Any provider works (Hetzner, GCP, AWS Lightsail, DigitalOcean, a home server).
 
-Kit version: **0.28.1** · Release: https://github.com/tmad4000/va3-selfhost/releases/tag/v0.28.1
+Kit version: **0.28.1-r2** · Release: https://github.com/tmad4000/va3-selfhost/releases/tag/v0.28.1-r2
 
 ---
 
@@ -65,10 +65,10 @@ sudo install -d -o root -g root -m 0700 /etc/va3
 ## 3. Download, verify and extract the kit
 
 ```sh
-VA3_VERSION=0.28.1
+VA3_VERSION=0.28.1-r2
 cd /tmp
-curl -fLO https://github.com/tmad4000/va3-selfhost/releases/download/v0.28.1/VA3Server-$VA3_VERSION.zip
-curl -fLO https://github.com/tmad4000/va3-selfhost/releases/download/v0.28.1/SHA256SUMS
+curl -fLO https://github.com/tmad4000/va3-selfhost/releases/download/v0.28.1-r2/VA3Server-$VA3_VERSION.zip
+curl -fLO https://github.com/tmad4000/va3-selfhost/releases/download/v0.28.1-r2/SHA256SUMS
 sha256sum -c --ignore-missing SHA256SUMS      # must print: VA3Server-...zip: OK
 
 sudo unzip -q VA3Server-$VA3_VERSION.zip -d /opt/va3/releases/$VA3_VERSION
@@ -107,7 +107,7 @@ sudo chmod 600 /etc/va3/va3.env
 
 `read -s` keeps the key out of your shell history and off the screen. systemd reads this file as root before it starts the service, so the `va3` user never needs read access to it.
 
-Optional overrides (see `docs/self-host-setup.md` inside the kit): `DRIVE_MODEL`, `DRIVE_TRANSCRIBE_MODEL`, `DRIVE_TTS_MODEL`, `DRIVE_TTS_VOICE`. Leave all other integrations unset; they are off unless configured.
+Optional: add `VA3_OWNER_NAME=YourName` so the assistant addresses you by name (default: neutral wording). Other overrides (see `docs/self-host-setup.md` inside the kit): `DRIVE_MODEL`, `DRIVE_TRANSCRIBE_MODEL`, `DRIVE_TTS_MODEL`, `DRIVE_TTS_VOICE`. Leave all other integrations unset; they are off unless configured.
 
 ## 6. Run it with systemd
 
